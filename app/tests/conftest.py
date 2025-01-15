@@ -4,6 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.models.model import Base
 from app.main import app, get_db
+from app.models import model
+from app.models.repository import Repository as FakeRepository
+from app.mocks import inventory as mock_inventory
 
 
 @pytest.fixture(name="session")
@@ -34,3 +37,16 @@ def client_fixture(session: Session):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def fake_repository(session) -> FakeRepository:
+    return FakeRepository(session=session)
+
+
+@pytest.fixture
+def given_inventory(fake_repository):
+
+    given_inventory = model.Inventory(**mock_inventory.MILK)
+
+    fake_repository.create(given_inventory)
