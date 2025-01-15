@@ -21,7 +21,9 @@ class AbstracRepository(ABC):
         pass
 
     @abstractmethod
-    def update(self, update_model: DeclarativeBase, update_data: BaseModel, id: int):
+    def update(
+        self, update_model: DeclarativeBase, update_data: Type[BaseModel], id: int
+    ):
         pass
 
     @abstractmethod
@@ -82,7 +84,7 @@ class Repository(AbstracRepository):
             raise e
 
     def update(
-        self, model, update_data: BaseModel, id: int
+        self, model, update_data: Type[BaseModel], id: int
     ) -> Optional[DeclarativeBase]:
         """
         Update a specific model by given id and return its updated data.
@@ -104,7 +106,7 @@ class Repository(AbstracRepository):
         model_keys = set(column.name for column in inspect(model).columns)
         shared_keys = data_keys & model_keys
 
-        update_dict = update_data.model_dump()
+        update_dict = update_data.model_dump()  # type: ignore
         for key in shared_keys:
             setattr(db_query, key, update_dict[key])
 
@@ -117,7 +119,7 @@ class Repository(AbstracRepository):
 
         return db_query
 
-    def delete(self, model: DeclarativeBase, id: int) -> bool:
+    def delete(self, model, id: int) -> bool:
         """
         Delete record to specific model by given id.
 
