@@ -1,0 +1,42 @@
+MEMBERS = [
+    {
+        "dni": "12345678",
+        "name": "Juan",
+        "surname": "Pérez",
+        "address": 1,
+        "phone": "+54 911 1234 5678",
+        "note": "Activo en el club.",
+    },
+    {
+        "dni": "23456789",
+        "name": "María",
+        "surname": "Gómez",
+        "address": 2,
+        "phone": "+54 911 8765 4321",
+        "note": "Dejó de participar por mudanza.",
+    },
+    {
+        "dni": "34567890",
+        "name": "Carlos",
+        "surname": "López",
+        "address": 3,
+        "phone": "+54 911 5555 1234",
+        "note": "Socio destacado.",
+    },
+    {
+        "dni": "45678901",
+        "name": "Ana",
+        "surname": "Rodríguez",
+        "address": 4,
+        "phone": "+54 911 6666 7890",
+        "note": "Participa en eventos comunitarios.",
+    },
+    {
+        "dni": "56789012",
+        "name": "Luis",
+        "surname": "Martínez",
+        "address": 5,
+        "phone": "+54 911 4444 5678",
+        "note": "Nuevo miembro.",
+    },
+]

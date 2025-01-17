@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, DeclarativeBase
 from sqlalchemy.inspection import inspect
 from typing import Type, Optional, List
 from pydantic import BaseModel
-import copy
+from app.models.model import Member
 
 
 class AbstracRepository(ABC):
@@ -130,6 +130,75 @@ class Repository(AbstracRepository):
         Return: True for success operation else False.
         """
         db_query = self.get_one(model=model, id=id)
+
+        if db_query:
+            self.session.delete(db_query)
+            self.session.commit()
+
+            return True
+        else:
+            return False
+
+
+class MemberRepository(Repository):
+
+    def update(self, model, update_data: Type[BaseModel], id: int):
+        pass
+
+    def get_member_by_dni(self, model: Type[Member], dni: str):
+
+        return self.session.query(model).filter_by(dni=dni).first()  # type: ignore
+
+    def update_by_dni(
+        self,
+        model,
+        update_data: Type[BaseModel],
+        dni: str,
+    ) -> Optional[DeclarativeBase]:
+        """
+        Update a specific model by given id and return its updated data.
+
+        Arguments:
+            model (SQLAlchemy model): Model to update.
+            update_data (Pydantic model): Data for the update.
+            dni (str): ID of the record to update.
+
+        Returns:
+            Updated model instance or None if not found.
+        """
+
+        db_query = self.get_member_by_dni(model=model, dni=dni)
+        if not db_query:
+            return None
+
+        data_keys = set(update_data.model_fields.keys())
+        model_keys = set(column.name for column in inspect(model).columns)
+        shared_keys = data_keys & model_keys
+
+        update_dict = update_data.model_dump()  # type: ignore
+        for key in shared_keys:
+            setattr(db_query, key, update_dict[key])
+
+        try:
+            self.session.add(db_query)
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            raise e
+
+        return db_query
+
+    def delete(self, model, dni) -> bool:
+        """
+        Delete record to specific model by given id.
+
+        Argument:
+            model (SQLAlchemy model): Given model.
+            dni (str): Data unique id.
+
+        Return: True for success operation else False.
+        """
+        db_query = self.get_member_by_dni(model=model, dni=dni)
 
         if db_query:
             self.session.delete(db_query)

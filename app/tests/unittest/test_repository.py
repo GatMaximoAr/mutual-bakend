@@ -1,6 +1,8 @@
 from app.data.inventory import ReadInventory
 from app.models.model import Inventory
+from app.models.model import Member
 from app.mocks import inventory as mock_inventory
+from app.mocks import members as mock_member
 from unittest import TestCase
 
 
