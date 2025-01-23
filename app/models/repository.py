@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
-from sqlalchemy.orm import Session, DeclarativeBase
+from sqlalchemy import delete
+from sqlalchemy.orm import Session, DeclarativeBase, SessionTransaction
 from sqlalchemy.inspection import inspect
 from typing import Type, Optional, List
 from pydantic import BaseModel
-from app.models.model import Member
+from app.models.model import Member, Address
+from app.data import member as dto_member
 
 
 class AbstracRepository(ABC):
@@ -37,6 +39,23 @@ class Repository(AbstracRepository):
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def _mapped_object_value(self, model, db_query, update_data: Type[BaseModel]):
+        """
+        Update SQLAlchemy model mapping values using DTO objects.
+
+        Arguments:
+            model (DeclarativeBase): The SQLAlchemy model.
+            db_query (DeclarativeBase): Database instance object
+            update_data (type BaseModel): Pydantyc data transfer object.
+        """
+        data_keys = set(update_data.model_fields.keys())
+        model_keys = set(column.name for column in inspect(model).columns)
+        shared_keys = data_keys & model_keys
+
+        update_dict = update_data.model_dump()  # type: ignore
+        for key in shared_keys:
+            setattr(db_query, key, update_dict[key])
+
     def create(self, new_data: DeclarativeBase) -> DeclarativeBase:
         """
         Create a record of the given model.
@@ -50,6 +69,7 @@ class Repository(AbstracRepository):
 
             self.session.add(new_data)
             self.session.commit()
+            self.session.flush()
 
             return new_data
 
@@ -102,13 +122,9 @@ class Repository(AbstracRepository):
         if not db_query:
             return None
 
-        data_keys = set(update_data.model_fields.keys())
-        model_keys = set(column.name for column in inspect(model).columns)
-        shared_keys = data_keys & model_keys
-
-        update_dict = update_data.model_dump()  # type: ignore
-        for key in shared_keys:
-            setattr(db_query, key, update_dict[key])
+        self._mapped_object_value(
+            model=model, db_query=db_query, update_data=update_data
+        )
 
         try:
             self.session.add(db_query)
@@ -167,26 +183,63 @@ class MemberRepository(Repository):
             Updated model instance or None if not found.
         """
 
-        db_query = self.get_member_by_dni(model=model, dni=dni)
-        if not db_query:
+        member_query = self.get_member_by_dni(model=model, dni=dni)
+        if not member_query:
             return None
+        # update data on simple fields
+        member_query.name = update_data.name  # type: ignore
+        member_query.surname = update_data.surname  # type: ignore
+        member_query.phone = update_data.phone  # type: ignore
+        member_query.active = update_data.active  # type: ignore
+        member_query.note = update_data.note  # type: ignore
+        member_query.date_of_entry = update_data.date_of_entry  # type: ignore
+        member_query.date_of_leaving = update_data.date_of_leaving  # type: ignore
+        self.session.commit()
 
-        data_keys = set(update_data.model_fields.keys())
-        model_keys = set(column.name for column in inspect(model).columns)
-        shared_keys = data_keys & model_keys
+        if member_query.addresses:
+            existing_addresses = [addr.id for addr in member_query.addresses]
+        else:
+            existing_addresses = []
 
-        update_dict = update_data.model_dump()  # type: ignore
-        for key in shared_keys:
-            setattr(db_query, key, update_dict[key])
+        if len(update_data.addresses) == 0:  # type: ignore
+
+            delete_stmt = delete(Address).where(Address.member_dni == member_query.dni)
+            self.session.execute(delete_stmt)
+            self.session.refresh(member_query)
+        else:
+            update_address_ids = [addr.id for addr in update_data.addresses if addr.id != None]  # type: ignore
+            if existing_addresses:
+                for iden in existing_addresses:
+                    if iden not in update_address_ids:
+                        delete_stmt = delete(Address).where(Address.id == iden)
+                        self.session.execute(delete_stmt)
+                        self.session.refresh(member_query)
+
+            for address in update_data.addresses:  # type: ignore
+                if address.id != None:
+                    db_address = self.get_one(model=Address, id=address.id)
+                    self._mapped_object_value(
+                        model=Address, db_query=db_address, update_data=address
+                    )
+                else:
+                    new_address = Address(
+                        member_dni=address.member_dni,
+                        city=address.city,
+                        province=address.province,
+                        street=address.street,
+                        reference=address.reference,
+                    )
+                    member_query.addresses.append(new_address)
 
         try:
-            self.session.add(db_query)
+            self.session.add(member_query)
             self.session.commit()
+            self.session.flush()
         except Exception as e:
             self.session.rollback()
             raise e
 
-        return db_query
+        return member_query
 
     def delete(self, model, dni) -> bool:
         """

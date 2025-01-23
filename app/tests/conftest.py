@@ -61,6 +61,16 @@ def given_inventory(fake_repository):
 @pytest.fixture
 def given_member(fake_member_repository):
 
-    given_member = model.Member(**mock_member.MEMBERS[0])
+    data = mock_member.MEMBERS[0]
+
+    given_member = model.Member(
+        dni=data["dni"],
+        name=data["name"],
+        surname=data["surname"],
+        phone=data["phone"],
+        note=data["note"],
+    )
+    address = model.Address(**data["addresses"][0])
+    given_member.addresses.append(address)
 
     fake_member_repository.create(given_member)

@@ -1,7 +1,7 @@
 from app.data import member as dto_member
 from sqlalchemy.orm import Session
 from app.models.repository import MemberRepository
-from app.models.model import Member
+from app.models.model import Member, Address
 from app.utils import model_to_dto
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -10,15 +10,30 @@ from typing import List
 
 async def create(member: dto_member.CreateMember, session: Session) -> BaseModel:
 
-    new_member = Member(**member.model_dump())
+    new_member = Member(
+        dni=member.dni,
+        name=member.name,
+        surname=member.surname,
+        phone=member.phone,
+        note=member.note,
+        active=member.active,
+    )
+
+    for address in member.addresses:
+        member_address = Address(
+            member_dni=member.dni,
+            city=address.city,
+            province=address.province,
+            reference=address.reference,
+            street=address.street,
+        )
+        new_member.addresses.append(member_address)
 
     repo = MemberRepository(session=session)
 
-    create_member = repo.create(new_data=new_member)
+    create_member = repo.create(new_member)
 
-    dto = model_to_dto(load=create_member, dto=dto_member.ReadMember)
-
-    return dto
+    return dto_member.ReadMember.model_validate(create_member)
 
 
 async def get_one(member_dni: str, session: Session) -> BaseModel:
@@ -30,7 +45,7 @@ async def get_one(member_dni: str, session: Session) -> BaseModel:
     if db_query != None:
         # print(db_query)
 
-        dto = model_to_dto(load=db_query, dto=dto_member.ReadMember)
+        dto = dto_member.ReadMember.model_validate(db_query)
 
         return dto
 
@@ -39,7 +54,7 @@ async def get_one(member_dni: str, session: Session) -> BaseModel:
     )
 
 
-async def get_all(session: Session) -> List[BaseModel]:
+async def get_all(session: Session) -> List[dto_member.ReadMember]:
 
     repo = MemberRepository(session=session)
     member_list = []
@@ -47,7 +62,7 @@ async def get_all(session: Session) -> List[BaseModel]:
     for member in repo.get_all(Member):
         if member:
 
-            member_list.append(model_to_dto(member, dto_member.ReadMember))
+            member_list.append(dto_member.ReadMember.model_validate(member))
 
     return member_list
 
@@ -61,8 +76,7 @@ async def update(dni: str, update_member: dto_member.UpdateMember, session: Sess
     )
     if update_data:
 
-        dto = model_to_dto(update_data, dto_member.ReadMember)
-
+        dto = dto_member.UpdateMember.model_validate(update_data)
         return dto
 
     raise HTTPException(status_code=404, detail=f"Member with DNI {dni} not found.")
