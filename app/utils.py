@@ -11,6 +11,8 @@ def model_to_dto(load: DeclarativeBase, dto: type[BaseModel]) -> BaseModel:
 
     :return: DTO instance with data mapped from 'load'.
     """
+    # print(load)
+
     dto_fields = dto.model_fields
 
     dto_data = {field: getattr(load, field, None) for field in dto_fields}

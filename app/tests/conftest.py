@@ -5,8 +5,9 @@ from sqlalchemy.orm import sessionmaker, Session
 from app.models.model import Base
 from app.main import app, get_db
 from app.models import model
-from app.models.repository import Repository as FakeRepository
+from app.models import repository
 from app.mocks import inventory as mock_inventory
+from app.mocks import members as mock_member
 
 
 @pytest.fixture(name="session")
@@ -40,8 +41,13 @@ def client_fixture(session: Session):
 
 
 @pytest.fixture
-def fake_repository(session) -> FakeRepository:
-    return FakeRepository(session=session)
+def fake_repository(session) -> repository.Repository:
+    return repository.Repository(session=session)
+
+
+@pytest.fixture
+def fake_member_repository(session) -> repository.MemberRepository:
+    return repository.MemberRepository(session=session)
 
 
 @pytest.fixture
@@ -50,3 +56,21 @@ def given_inventory(fake_repository):
     given_inventory = model.Inventory(**mock_inventory.MILK)
 
     fake_repository.create(given_inventory)
+
+
+@pytest.fixture
+def given_member(fake_member_repository):
+
+    data = mock_member.MEMBERS[0]
+
+    given_member = model.Member(
+        dni=data["dni"],
+        name=data["name"],
+        surname=data["surname"],
+        phone=data["phone"],
+        note=data["note"],
+    )
+    address = model.Address(**data["addresses"][0])
+    given_member.addresses.append(address)
+
+    fake_member_repository.create(given_member)

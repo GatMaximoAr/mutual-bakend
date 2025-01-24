@@ -14,9 +14,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
     """Intance of database."""
-    db = SessionLocal()
-    Base.metadata.create_all(bind=db.get_bind())
+
     try:
-        yield db
+        with SessionLocal() as db:
+            Base.metadata.create_all(bind=db.get_bind())
+            yield db
     finally:
         db.close()

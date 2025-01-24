@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-from app.main import app
 from app.mocks import inventory as mock_inventory
 from app.data.inventory import ReadInventory
 from unittest import TestCase
@@ -71,7 +70,6 @@ def test_can_get_all(client: TestClient, given_inventory):
     assert response.status_code == 200
 
     item_list: List = response.json()
-    test_ = TestCase()
 
     assert len(item_list) != 0
 
