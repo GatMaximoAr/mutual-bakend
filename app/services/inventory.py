@@ -3,25 +3,23 @@ from sqlalchemy.orm import Session, DeclarativeBase
 from app.data import inventory as dto_inventory
 from app.models.model import Inventory
 from app.models.repository import Repository
-from app.utils import model_to_dto
-from pydantic import BaseModel
 from typing import List
 
 
 async def create_inventory(
     item: dto_inventory.CreateInventory, session: Session
-) -> BaseModel:
+) -> dto_inventory.ReadInventory:
 
     repo = Repository(session=session)
 
     new_item = repo.create(Inventory(**item.model_dump()))
 
-    dto = model_to_dto(new_item, dto_inventory.ReadInventory)
+    dto = dto_inventory.ReadInventory.model_validate(new_item)
 
     return dto
 
 
-async def get_one(id: int, session: Session) -> BaseModel:
+async def get_one(id: int, session: Session) -> dto_inventory.ReadInventory:
 
     repo = Repository(session=session)
 
@@ -29,12 +27,12 @@ async def get_one(id: int, session: Session) -> BaseModel:
 
     if item:
 
-        return model_to_dto(load=item, dto=dto_inventory.ReadInventory)
+        return dto_inventory.ReadInventory.model_validate(item)
 
     raise HTTPException(status_code=404, detail=f"Item {id} not found")
 
 
-async def get_all(session: Session) -> List[BaseModel]:
+async def get_all(session: Session) -> List[dto_inventory.ReadInventory]:
 
     repo = Repository(session=session)
     item_list = []
@@ -42,18 +40,22 @@ async def get_all(session: Session) -> List[BaseModel]:
     for item in repo.get_all(Inventory):
         if item:
 
-            item_list.append(model_to_dto(item, dto_inventory.ReadInventory))
+            valid_item = dto_inventory.ReadInventory.model_validate(item)
+
+            item_list.append(valid_item)
 
     return item_list
 
 
-async def update(id: int, update_data: dto_inventory.CreateInventory, session: Session):
+async def update(
+    id: int, update_data: dto_inventory.CreateInventory, session: Session
+) -> dto_inventory.ReadInventory:
     repo = Repository(session=session)
 
     update_item = repo.update(Inventory, update_data=update_data, id=id)  # type: ignore
 
     if update_item:
-        return model_to_dto(load=update_item, dto=dto_inventory.ReadInventory)
+        return dto_inventory.ReadInventory.model_validate(update_item)
 
     raise HTTPException(status_code=404, detail=f"Item {id} not found")
 

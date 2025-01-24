@@ -2,13 +2,13 @@ from app.data import member as dto_member
 from sqlalchemy.orm import Session
 from app.models.repository import MemberRepository
 from app.models.model import Member, Address
-from app.utils import model_to_dto
 from fastapi import HTTPException
-from pydantic import BaseModel
 from typing import List
 
 
-async def create(member: dto_member.CreateMember, session: Session) -> BaseModel:
+async def create(
+    member: dto_member.CreateMember, session: Session
+) -> dto_member.ReadMember:
 
     new_member = Member(
         dni=member.dni,
@@ -36,7 +36,7 @@ async def create(member: dto_member.CreateMember, session: Session) -> BaseModel
     return dto_member.ReadMember.model_validate(create_member)
 
 
-async def get_one(member_dni: str, session: Session) -> BaseModel:
+async def get_one(member_dni: str, session: Session) -> dto_member.ReadMember:
 
     repo = MemberRepository(session=session)
 
@@ -67,7 +67,9 @@ async def get_all(session: Session) -> List[dto_member.ReadMember]:
     return member_list
 
 
-async def update(dni: str, update_member: dto_member.UpdateMember, session: Session):
+async def update(
+    dni: str, update_member: dto_member.UpdateMember, session: Session
+) -> dto_member.UpdateMember:
 
     repo = MemberRepository(session=session)
 
